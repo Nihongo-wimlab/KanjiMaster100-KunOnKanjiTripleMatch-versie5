@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanji Master 100 - A2 Niveau</title>
+    
+    <!-- Tailwind CSS voor opmaak -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Babel voor JSX ondersteuning in de browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .kanji-font { font-family: "Noto Sans JP", "Hiragino Kaku Gothic Pro", "Meiryo", sans-serif; }
+        .bg-benzol-green { background-color: #00d5a0; }
+        .bg-yellow-orange { background-color: #ffb347; }
+        .bg-light-caucus-blue { background-color: #D1E9FF; }
+        .bg-venice-green { background-color: #055D49; } 
+        .bg-pinkish-cinnamon { background-color: #D48166; } 
+    </style>
+</head>
+<body class="bg-[#F0F4F8] min-h-screen">
+
+    <div id="root"></div>
+
+    <!-- De App Logica -->
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useMemo, useCallback } from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+
+        const STORAGE_KEY = 'kanji_master_progress';
+
+        // --- DATA (100 Kanji met A2-niveau zinnen) ---
+        const KANJI_DATA = [
+            { id: 1, kanji: "日", onyomi: "ニチ", kunyomi: "ひ", meaning: "Dag/Zon", sentenceOn: "日曜日に映画を見に行きます。", transOn: "Zondag ga ik naar de film.", sentenceKun: "今日は日が長いです。", transKun: "De dagen zijn lang vandaag." },
+            { id: 2, kanji: "一", onyomi: "イチ", kunyomi: "ひと", meaning: "Eén", sentenceOn: "一ヶ月に一回、旅行をします。", transOn: "Eén keer per maand reis ik.", sentenceKun: "リンゴを一つください。", transKun: "Eén appel, alstublieft." },
+            { id: 3, kanji: "国", onyomi: "コク", kunyomi: "くに", meaning: "Land", sentenceOn: "外国の料理が好きです。", transOn: "Ik hou van buitenlands eten.", sentenceKun: "私の国はとても広いです。", transKun: "Mijn land is erg groot." },
+            { id: 4, kanji: "会", onyomi: "カイ", kunyomi: "あ(う)", meaning: "Ontmoeten", sentenceOn: "会社で働いています。", transOn: "Ik werk bij een bedrijf.", sentenceKun: "昨日、友達に会いました。", transKun: "Gisteren heb ik een vriend ontmoet." },
+            { id: 5, kanji: "人", onyomi: "ジン", kunyomi: "ひと", meaning: "Persoon", sentenceOn: "日本人の友達がいます。", transOn: "Ik heb een Japanse vriend.", sentenceKun: "あの人はとても親切です。", transKun: "Die persoon is erg vriendelijk." },
+            { id: 6, kanji: "大", onyomi: "ダイ", kunyomi: "おお(きい)", meaning: "Groot", sentenceOn: "大学で経済を勉強しています。", transOn: "Ik studeer economie aan de universiteit.", sentenceKun: "大きすぎる靴を買いました。", transKun: "Ik heb te grote schoenen gekocht." },
+            { id: 7, kanji: "時", onyomi: "ジ", kunyomi: "とき", meaning: "Tijd", sentenceOn: "今は三時半です。", transOn: "Het is nu half vier.", sentenceKun: "子供の時、よく泳ぎました。", transKun: "Toen ik een kind was, zwom ik vaak." },
+            { id: 8, kanji: "本", onyomi: "ホン", kunyomi: "もと", meaning: "Boek/Basis", sentenceOn: "日本語の本を読みます。", transOn: "Ik lees een Japans boek.", sentenceKun: "山本さんは私の先生です。", transKun: "Dhr. Yamamoto is mijn leraar." },
+            { id: 9, kanji: "水", onyomi: "スイ", kunyomi: "みず", meaning: "Water", sentenceOn: "水曜日はダンスのクラスです。", transOn: "Woensdag is de dansles.", sentenceKun: "コップに水を入れます。", transKun: "Ik schenk water in het glas." },
+            { id: 10, kanji: "山", onyomi: "サン", kunyomi: "やま", meaning: "Berg", sentenceOn: "有名な火山を見ました。", transOn: "Ik heb een beroemde vulkaan gezien.", sentenceKun: "週末は山に行きます。", transKun: "In het weekend ga ik naar de bergen." },
+            { id: 11, kanji: "中", onyomi: "チュウ", kunyomi: "なか", meaning: "Midden/Binnen", sentenceOn: "世界中に友達を作りたいです。", transOn: "Ik wil vrienden maken over de hele wereld.", sentenceKun: "冷蔵庫の中に牛乳があります。", transKun: "Er staat melk in de koelkast." },
+            { id: 12, kanji: "出", onyomi: "シュツ", kunyomi: "で(る)", meaning: "Uitgaan", sentenceOn: "明日、出発します。", transOn: "Ik vertrek morgen.", sentenceKun: "家を出る前に、窓を閉めます。", transKun: "Voordat ik het huis verlaat, sluit ik de ramen." },
+            { id: 13, kanji: "上", onyomi: "ジョウ", kunyomi: "うえ", meaning: "Boven", sentenceOn: "彼はテニスが上手です。", transOn: "Hij is goed in tennis.", sentenceKun: "テーブルの上に鍵があります。", transKun: "De sleutels liggen op de tafel." },
+            { id: 14, kanji: "下", onyomi: "カ", kunyomi: "した", meaning: "Beneden", sentenceOn: "地下鉄で一駅です。", transOn: "Het is één halte met de metro.", sentenceKun: "木の下で昼ごはんを食べました。", transKun: "Ik heb onder de boom geluncht." },
+            { id: 15, kanji: "行", onyomi: "コウ", kunyomi: "い(く)", meaning: "Gaan", sentenceOn: "銀行はどこにありますか。", transOn: "Waar is de bank?", sentenceKun: "一緒にデパートへ行きましょう。", transKun: "Laten we samen naar het warenhuis gaan." },
+            { id: 16, kanji: "来", onyomi: "ライ", kunyomi: "く(る)", meaning: "Komen", sentenceOn: "来月、日本へ行きます。", transOn: "Volgende maand ga ik naar Japan.", sentenceKun: "私の家へ遊びに来てください。", transKun: "Kom alsjeblieft een keertje bij mij langs." },
+            { id: 17, kanji: "子", onyomi: "シ", kunyomi: "こ", meaning: "Kind", sentenceOn: "電子辞書を使いますか。", transOn: "Gebruikt u een elektronisch woordenboek?", sentenceKun: "あの子は私の妹です。", transKun: "Dat kind is mijn zusje." },
+            { id: 18, kanji: "学", onyomi: "ガク", kunyomi: "まな(ぶ)", meaning: "Leren", sentenceOn: "学生の時、よく勉強しました。", transOn: "Toen ik student was, studeerde ik veel.", sentenceKun: "色々な言葉を学びたいです。", transKun: "Ik wil verschillende talen leren." },
+            { id: 19, kanji: "金", onyomi: "キン", kunyomi: "かね", meaning: "Goud/Geld", sentenceOn: "金曜日にパーティーをします。", transOn: "Op vrijdag geven we een feestje.", sentenceKun: "お金を払うのを忘れました。", transKun: "Ik ben vergeten te betalen." },
+            { id: 20, kanji: "火", onyomi: "カ", kunyomi: "ひ", meaning: "Vuur", sentenceOn: "火曜日はとても忙しいです。", transOn: "Dinsdag heb ik het erg druk.", sentenceKun: "火の扱いに気をつけてください。", transKun: "Wees voorzichtig met vuur." },
+            { id: 21, kanji: "月", onyomi: "ゲツ", kunyomi: "つき", meaning: "Maand/Maan", sentenceOn: "一月はとても寒いです。", transOn: "Januari is erg koud.", sentenceKun: "月がきれいに見えます。", transKun: "De maan is mooi te zien." },
+            { id: 22, kanji: "木", onyomi: "モク", kunyomi: "き", meaning: "Boom", sentenceOn: "木曜日に会いましょう。", transOn: "Laten we donderdag afspreken.", sentenceKun: "庭に古い木があります。", transKun: "Er staat een oude boom in de tuin." },
+            { id: 23, kanji: "土", onyomi: "ド", kunyomi: "つち", meaning: "Grond", sentenceOn: "土曜日に買い物をします。", transOn: "Op zaterdag doe ik boodschappen.", sentenceKun: "土を少し掘ります。", transKun: "Ik graaf een beetje in de grond." },
+            { id: 24, kanji: "先", onyomi: "セン", kunyomi: "さき", meaning: "Eerder", sentenceOn: "先生に質問をしました。", transOn: "Ik heb de leraar een vraag gesteld.", sentenceKun: "お先に失礼します。", transKun: "Ik ga er vandoor (excuses)." },
+            { id: 25, kanji: "生", onyomi: "セイ", kunyomi: "う(まれる)", meaning: "Leven", sentenceOn: "高校生の時、テニスをしていました。", transOn: "Op de middelbare school tenniste ik.", sentenceKun: "私はオランダで生まれました。", transKun: "Ik ben in Nederland geboren." },
+            { id: 26, kanji: "今", onyomi: "コン", kunyomi: "いま", meaning: "Nu", sentenceOn: "今週、京都へ行きます。", transOn: "Deze week ga ik naar Kyoto.", sentenceKun: "今、何時ですか。", transKun: "Hoe laat is het nu?" },
+            { id: 27, kanji: "何", onyomi: "カ", kunyomi: "なに", meaning: "Wat", sentenceOn: "何度か日本へ行きました。", transOn: "Ik ben een paar keer naar Japan geweest.", sentenceKun: "箱の中に何がありますか。", transKun: "Wat zit er in de doos?" },
+            { id: 28, kanji: "年", onyomi: "ネン", kunyomi: "とし", meaning: "Jaar", sentenceOn: "三年前に日本へ来ました。", transOn: "Ik kwam drie jaar geleden naar Japan.", sentenceKun: "新しい年が始まりました。", transKun: "Een nieuw jaar is begonnen." },
+            { id: 29, kanji: "私", onyomi: "シ", kunyomi: "わたし", meaning: "Ik", sentenceOn: "私立の病院へ行きました。", transOn: "Ik ging naar een privéziekenhuis.", sentenceKun: "私はパンよりご飯が好きです。", transKun: "Ik hou meer van rijst dan van brood." },
+            { id: 30, kanji: "男", onyomi: "ダン", kunyomi: "おとこ", meaning: "Man", sentenceOn: "男子学生が多いクラスです。", transOn: "Een klas met veel mannelijke studenten.", sentenceKun: "あの男の子は誰ですか。", transKun: "Wie is die jongen?" },
+            { id: 31, kanji: "女", onyomi: "ジョ", kunyomi: "おんな", meaning: "Vrouw", sentenceOn: "彼女はとても元気です。", transOn: "Zij is erg energiek.", sentenceKun: "女の子が公園で遊んでいます。", transKun: "Het meisje speelt in het park." },
+            { id: 32, kanji: "母", onyomi: "ボ", kunyomi: "はは", meaning: "Moeder", sentenceOn: "母国語は何ですか。", transOn: "Wat is uw moedertaal?", sentenceKun: "母は毎日掃除をします。", transKun: "Moeder maakt elke dag schoon." },
+            { id: 33, kanji: "父", onyomi: "フ", kunyomi: "ちち", meaning: "Vader", sentenceOn: "父母に手紙を書きました。", transOn: "Ik heb mijn ouders een brief geschreven.", sentenceKun: "父はテニスが下手です。", transKun: "Vader is slecht in tennis." },
+            { id: 34, kanji: "食", onyomi: "ショク", kunyomi: "た(べる)", meaning: "Eten", sentenceOn: "食事の前に手を洗います。", transOn: "Was je handen voor het eten.", sentenceKun: "朝ごはんを食べましたか。", transKun: "Heb je al ontbeten?" },
+            { id: 35, kanji: "飲", onyomi: "イン", kunyomi: "の(む)", meaning: "Drinken", sentenceOn: "飲食店でバイトをしています。", transOn: "Ik werk in de horeca.", sentenceKun: "薬を飲むのを忘れました。", transKun: "Ik ben vergeten de medicijnen in te nemen." },
+            { id: 36, kanji: "見", onyomi: "ケン", kunyomi: "み(る)", meaning: "Kijken", sentenceOn: "意見を教えてください。", transOn: "Vertel me je mening.", sentenceKun: "新しい映画を見たいです。", transKun: "Ik wil de nieuwe film zien." },
+            { id: 37, kanji: "聞", onyomi: "ブン", kunyomi: "き(く)", meaning: "Horen", sentenceOn: "新聞を読みますか。", transOn: "Leest u de krant?", sentenceKun: "音楽を聞きながら勉強します。", transKun: "Ik studeer terwijl ik naar muziek luister." },
+            { id: 38, kanji: "話", onyomi: "ワ", kunyomi: "はな(す)", meaning: "Spreken", sentenceOn: "電話で友達と話しました。", transOn: "Ik sprak met een vriend aan de telefoon.", sentenceKun: "ゆっくり話してください。", transKun: "Spreek langzaam, alstublieft." },
+            { id: 39, kanji: "買", onyomi: "バイ", kunyomi: "か(う)", meaning: "Kopen", sentenceOn: "売買のルールを覚えます。", transOn: "Ik leer de regels van handel.", sentenceKun: "スーパーで卵を買いました。", transKun: "Ik kocht eieren in de supermarkt." },
+            { id: 40, kanji: "行", onyomi: "コウ", kunyomi: "い(く)", meaning: "Gaan", sentenceOn: "銀行へお金を借りに行きます。", transOn: "Ik ga naar de bank om geld te lenen.", sentenceKun: "明日、どこへ行きますか。", transKun: "Waar ga je morgen heen?" },
+            // --- UITBREIDING NAAR 100 ---
+            { id: 41, kanji: "入", onyomi: "ニュウ", kunyomi: "はい(る)", meaning: "Binnenkomen", sentenceOn: "大学に入学しました。", transOn: "Ik ben begonnen aan de universiteit.", sentenceKun: "部屋に入ってもいいですか。", transKun: "Mag ik de kamer binnenkomen?" },
+            { id: 42, kanji: "車", onyomi: "シャ", kunyomi: "くるま", meaning: "Auto", sentenceOn: "電車で学校へ通っています。", transOn: "Ik ga met de trein naar school.", sentenceKun: "新しい車を買いたいです。", transKun: "Ik wil een nieuwe auto kopen." },
+            { id: 43, kanji: "門", onyomi: "モン", kunyomi: "かど", meaning: "Poort", sentenceOn: "正門の前で待ち合わせます。", transOn: "We spreken af voor de hoofdgroot.", sentenceKun: "門の近くに花があります。", transKun: "Er staan bloemen bij de poort." },
+            { id: 44, kanji: "校", onyomi: "コウ", kunyomi: "", meaning: "School", sentenceOn: "校長先生の話を聞きました。", transOn: "Ik luisterde naar het verhaal van de directeur.", sentenceKun: "学校は八時に始まります。", transKun: "School begint om acht uur." },
+            { id: 45, kanji: "外", onyomi: "ガイ", kunyomi: "そと", meaning: "Buiten", sentenceOn: "外国へ旅行に行きたいです。", transOn: "Ik wil naar het buitenland reizen.", sentenceKun: "外で遊ぶのが好きです。", transKun: "Ik hou van buiten spelen." },
+            { id: 46, kanji: "名", onyomi: "メイ", kunyomi: "な", meaning: "Naam", sentenceOn: "有名なレストランへ行きました。", transOn: "We gingen naar een beroemd restaurant.", sentenceKun: "お名前を教えてください。", transKun: "Vertel me uw naam, alstublieft." },
+            { id: 47, kanji: "前", onyomi: "ゼン", kunyomi: "まえ", meaning: "Voor", sentenceOn: "三年前、日本に来ました。", transOn: "Drie jaar geleden kwam ik naar Japan.", sentenceKun: "駅の前で待っています。", transKun: "Ik wacht voor het station." },
+            { id: 48, kanji: "後", onyomi: "ゴ", kunyomi: "うし(ろ)", meaning: "Achter", sentenceOn: "放課後、テニスをします。", transOn: "Na school speel ik tennis.", sentenceKun: "猫はドアの後ろにいます。", transKun: "De kat zit achter de deur." },
+            { id: 49, kanji: "左", onyomi: "サ", kunyomi: "ひだり", meaning: "Links", sentenceOn: "左右を確認してください。", transOn: "Controleer links en rechts.", sentenceKun: "左に曲がると銀行があります。", transKun: "Als je links afslaat, zie je de bank." },
+            { id: 50, kanji: "右", onyomi: "ウ", kunyomi: "みぎ", meaning: "Rechts", sentenceOn: "右折禁止の道です。", transOn: "Dit is een straat waar je niet rechtsaf mag.", sentenceKun: "右手にペンを持ってください。", transKun: "Houd de pen in je rechterhand." },
+            { id: 51, kanji: "長", onyomi: "チョウ", kunyomi: "なが(い)", meaning: "Lang/Hoofd", sentenceOn: "社長はとても親切な人です。", transOn: "De directeur is een vriendelijk persoon.", sentenceKun: "この映画は少し長いです。", transKun: "Deze film is een beetje lang." },
+            { id: 52, kanji: "高", onyomi: "コウ", kunyomi: "たか(い)", meaning: "Hoog/Duur", sentenceOn: "高校生になりました。", transOn: "Ik ben nu een middelbare scholier.", sentenceKun: "このカメラは高すぎます。", transKun: "Deze camera is te duur." },
+            { id: 53, kanji: "安", onyomi: "アン", kunyomi: "やす(い)", meaning: "Goedkoop", sentenceOn: "安全な場所で遊びましょう。", transOn: "Laten we op een veilige plek spelen.", sentenceKun: "安くて美味しい店を知っています。", transKun: "Ik ken een goedkope en lekkere zaak." },
+            { id: 54, kanji: "北", onyomi: "ホク", kunyomi: "きた", meaning: "Noord", sentenceOn: "北海道へスキーに行きました。", transOn: "Ik ging skiën in Hokkaido.", sentenceKun: "北の風が吹いています。", transKun: "De noordenwind waait." },
+            { id: 55, kanji: "南", onyomi: "ナン", kunyomi: "みなみ", meaning: "Zuid", sentenceOn: "南米の音楽に興味があります。", transOn: "Ik ben geïnteresseerd in Zuid-Amerikaanse muziek.", sentenceKun: "南向きの部屋は明るいです。", transKun: "Kamers op het zuiden zijn licht." },
+            { id: 56, kanji: "東", onyomi: "トウ", kunyomi: "ひがし", meaning: "Oost", sentenceOn: "東京は日本の首都です。", transOn: "Tokyo is de hoofdstad van Japan.", sentenceKun: "東の方に山が見えます。", transKun: "In het oosten zie je bergen." },
+            { id: 57, kanji: "西", onyomi: "セイ", kunyomi: "にし", meaning: "West", sentenceOn: "西洋の歴史を勉強しています。", transOn: "Ik studeer westerse geschiedenis.", sentenceKun: "西日が眩しいです。", transKun: "De middagzon (west) is verblindend." },
+            { id: 58, kanji: "白", onyomi: "ハク", kunyomi: "しろ(い)", meaning: "Wit", sentenceOn: "白鳥が湖にいます。", transOn: "Er zijn zwanen (witte vogels) in het meer.", sentenceKun: "白いシャツを着ています。", transKun: "Ik draag een wit shirt." },
+            { id: 59, kanji: "黒", onyomi: "コク", kunyomi: "くろ(い)", meaning: "Zwart", sentenceOn: "黒板に文字を書きます。", transOn: "Ik schrijf letters op het schoolbord.", sentenceKun: "黒い靴を履いています。", transKun: "Ik draag zwarte schoenen." },
+            { id: 60, kanji: "赤", onyomi: "セキ", kunyomi: "あか(い)", meaning: "Rood", sentenceOn: "赤道はとても暑い場所です。", transOn: "De evenaar is een erg hete plek.", sentenceKun: "赤いリンゴを食べました。", transKun: "Ik heb een rode appel gegeten." },
+            { id: 61, kanji: "青", onyomi: "セイ", kunyomi: "あお(い)", meaning: "Blauw", sentenceOn: "青年が走っています。", transOn: "De jongeman is aan het rennen.", sentenceKun: "空が青くてきれいです。", transKun: "De lucht is blauw en mooi." },
+            { id: 62, kanji: "言", onyomi: "ゲン", kunyomi: "い(う)", meaning: "Zeggen", sentenceOn: "言語の勉強は楽しいです。", transOn: "Talen studeren is leuk.", sentenceKun: "彼は「ありがとう」と言いました。", transKun: "Hij zei 'bedankt'." },
+            { id: 63, kanji: "読", onyomi: "ドク", kunyomi: "よ(む)", meaning: "Lezen", sentenceOn: "読書が私の趣味です。", transOn: "Lezen is mijn hobby.", sentenceKun: "漢字を正しく読みたいです。", transKun: "Ik wil kanji correct kunnen lezen." },
+            { id: 64, kanji: "書", onyomi: "ショ", kunyomi: "か(く)", meaning: "Schrijven", sentenceOn: "辞書を使って調べます。", transOn: "Ik zoek het op met een woordenboek.", sentenceKun: "友達に手紙を書きました。", transKun: "Ik heb een brief aan een vriend geschreven." },
+            { id: 65, kanji: "友", onyomi: "ユウ", kunyomi: "とも", meaning: "Vriend", sentenceOn: "親友と一緒に遊びます。", transOn: "Ik speel met mijn beste vriend.", sentenceKun: "友達と映画に行きました。", transKun: "Ik ben met een vriend naar de film gegaan." },
+            { id: 66, kanji: "少", onyomi: "ショウ", kunyomi: "すこ(し)", meaning: "Weinig", sentenceOn: "少年が本を読んでいます。", transOn: "De jongen leest een boek.", sentenceKun: "砂糖を少し入れてください。", transKun: "Doe er een beetje suiker bij." },
+            { id: 67, kanji: "多", onyomi: "タ", kunyomi: "おお(い)", meaning: "Veel", sentenceOn: "多数決で決めましょう。", transOn: "Laten we beslissen via meerderheid van stemmen.", sentenceKun: "この町は人が多いです。", transKun: "Er zijn veel mensen in deze stad." },
+            { id: 68, kanji: "千", onyomi: "セン", kunyomi: "ち", meaning: "Duizend", sentenceOn: "二千円払いました。", transOn: "Ik heb tweeduizend yen betaald.", sentenceKun: "千羽鶴を折ります。", transKun: "Ik vouw duizend kraanvogels." },
+            { id: 69, kanji: "万", onyomi: "マン", kunyomi: "", meaning: "Tienduizend", sentenceOn: "一万円札を出しました。", transOn: "Ik haalde een biljet van tienduizend yen tevoorschijn.", sentenceKun: "万歳と言って喜びました。", transKun: "Ik riep 'Banzai' van blijdschap." },
+            { id: 70, kanji: "円", onyomi: "エン", kunyomi: "まる(い)", meaning: "Yen/Cirkel", sentenceOn: "百円ショップへ行きました。", transOn: "Ik ging naar de honderd-yen winkel.", sentenceKun: "円いテーブルを買いました。", transKun: "Ik heb een ronde tafel gekocht." },
+            { id: 71, kanji: "分", onyomi: "フン", kunyomi: "わ(かる)", meaning: "Minuut/Begrijpen", sentenceOn: "十分後に来てください。", transOn: "Kom over tien minuten, alstublieft.", sentenceKun: "日本語が少し分かります。", transKun: "Ik begrijp een beetje Japans." },
+            { id: 72, kanji: "半", onyomi: "ハン", kunyomi: "なか(ば)", meaning: "Helft", sentenceOn: "三時半に会いましょう。", transOn: "Laten we om half vier afspreken.", sentenceKun: "半分食べていいですよ。", transKun: "Je mag de helft opeten." },
+            { id: 73, kanji: "正", onyomi: "セイ", kunyomi: "ただ(しい)", meaning: "Correct", sentenceOn: "正月にお寺へ行きます。", transOn: "Met Nieuwjaar ga ik naar de tempel.", sentenceKun: "正しい答えを教えてください。", transKun: "Vertel me het juiste antwoord." },
+            { id: 74, kanji: "百", onyomi: "ヒャク", kunyomi: "もも", meaning: "Honderd", sentenceOn: "百貨店で服を買いました。", transOn: "Ik kocht kleren in een warenhuis.", sentenceKun: "百点を取りました！", transKun: "Ik heb honderd punten gehaald!" },
+            { id: 75, kanji: "元", onyomi: "ゲン", kunyomi: "もと", meaning: "Oorsprong", sentenceOn: "元気な子供たちが遊んでいます。", transOn: "Energieke kinderen zijn aan het spelen.", sentenceKun: "元の場所に戻してください。", transKun: "Zet het terug op de oorspronkelijke plek." },
+            { id: 76, kanji: "気", onyomi: "キ", kunyomi: "", meaning: "Geest/Lucht", sentenceOn: "今日の天気はいいですね。", transOn: "Het weer van vandaag is mooi, hè?", sentenceKun: "気をつけて帰ってください。", transKun: "Kom voorzichtig naar huis." },
+            { id: 77, kanji: "天", onyomi: "テン", kunyomi: "あめ", meaning: "Hemel", sentenceOn: "天使のような笑顔ですね。", transOn: "Een glimlach als een engel.", sentenceKun: "天の川が見えます。", transKun: "De Melkweg is te zien." },
+            { id: 78, kanji: "私", onyomi: "シ", kunyomi: "わたし", meaning: "Ik", sentenceOn: "私立の学校へ通っています。", transOn: "Ik ga naar een privéschool.", sentenceKun: "私は日本語を勉強しています。", transKun: "Ik studeer Japans." },
+            { id: 79, kanji: "立", onyomi: "リツ", kunyomi: "た(つ)", meaning: "Staan", sentenceOn: "国立公園へ行きました。", transOn: "We gingen naar een nationaal park.", sentenceKun: "椅子の横に立ってください。", transKun: "Ga naast de stoel staan." },
+            { id: 80, kanji: "歩", onyomi: "ホ", kunyomi: "ある(く)", meaning: "Lopen", sentenceOn: "歩道橋を渡りましょう。", transOn: "Laten we de voetgangersbrug oversteken.", sentenceKun: "駅まで歩いて行きます。", transKun: "Ik loop naar het station." },
+            { id: 81, kanji: "見", onyomi: "ケン", kunyomi: "み(る)", meaning: "Zien", sentenceOn: "見学の申し込みをしました。", transOn: "Ik heb me aangemeld voor de rondleiding.", sentenceKun: "富士山を見ましたか。", transKun: "Heb je de berg Fuji gezien?" },
+            { id: 82, kanji: "思", onyomi: "シ", kunyomi: "おも(う)", meaning: "Denken", sentenceOn: "不思議なことが起きました。", transOn: "Er gebeurde iets mysterieus.", sentenceKun: "いい考えだと思います。", transKun: "Ik denk dat het een goed idee is." },
+            { id: 83, kanji: "道", onyomi: "ドウ", kunyomi: "みち", meaning: "Weg", sentenceOn: "書道を習っています。", transOn: "Ik leer kalligrafie.", sentenceKun: "この道を真っ直ぐ行きます。", transKun: "Ga rechtdoor in deze straat." },
+            { id: 84, kanji: "花", onyomi: "カ", kunyomi: "はな", meaning: "Bloem", sentenceOn: "花火大会に行きたいです。", transOn: "Ik wil naar het vuurwerkfestival.", sentenceKun: "庭に花が咲きました。", transKun: "Er staan bloemen in bloei in de tuin." },
+            { id: 85, kanji: "耳", onyomi: "ジ", kunyomi: "みみ", meaning: "Oor", sentenceOn: "耳鼻科へ行きました。", transOn: "Ik ging naar de KNO-arts.", sentenceKun: "耳が少し痛いです。", transKun: "Mijn oor doet een beetje pijn." },
+            { id: 86, kanji: "目", onyomi: "モク", kunyomi: "め", meaning: "Oog", sentenceOn: "目的を忘れないでください。", transOn: "Vergeet het doel niet.", sentenceKun: "目が少し赤いです。", transKun: "Mijn ogen zijn een beetje rood." },
+            { id: 87, kanji: "手", onyomi: "シュ", kunyomi: "て", meaning: "Hand", sentenceOn: "歌手になりたいです。", transOn: "Ik wil zanger worden.", sentenceKun: "手を洗ってから食べます。", transKun: "Ik was mijn handen voor het eten." },
+            { id: 88, kanji: "足", onyomi: "ソク", kunyomi: "あし", meaning: "Voet/Been", sentenceOn: "不足しているものはないですか。", transOn: "Ontbreekt er niets?", sentenceKun: "足がとても疲れました。", transKun: "Mijn benen zijn erg moe." },
+            { id: 89, kanji: "口", onyomi: "コウ", kunyomi: "くち", meaning: "Mond", sentenceOn: "入口はあちらです。", transOn: "De ingang is daar.", sentenceKun: "口を大きく開けてください。", transKun: "Open je mond wijd, alstublieft." },
+            { id: 90, kanji: "耳", onyomi: "ジ", kunyomi: "みみ", meaning: "Oor", sentenceOn: "耳鼻科へ行きました。", transOn: "Ik ging naar de KNO-arts.", sentenceKun: "耳が痛いです。", transKun: "Mijn oor doet pijn." },
+            { id: 91, kanji: "雨", onyomi: "ウ", kunyomi: "あめ", meaning: "Regen", sentenceOn: "梅雨の時期は嫌いです。", transOn: "Ik haat het regenseizoen.", sentenceKun: "雨が降ってきました。", transKun: "Het is begonnen te regenen." },
+            { id: 92, kanji: "電", onyomi: "デン", kunyomi: "", meaning: "Elektriciteit", sentenceOn: "電話をかけてもいいですか。", transOn: "Mag ik bellen?", sentenceKun: "電気を消してください。", transKun: "Doe het licht uit, alstublieft." },
+            { id: 93, kanji: "週", onyomi: "シュウ", kunyomi: "", meaning: "Week", sentenceOn: "一週間に一回掃除します。", transOn: "Ik maak één keer per week schoon.", sentenceKun: "先週、海へ行きました。", transKun: "Vorige week ben ik naar de zee gegaan." },
+            { id: 94, kanji: "休", onyomi: "キュウ", kunyomi: "やす(む)", meaning: "Rust", sentenceOn: "冬休みはどこへ行きますか。", transOn: "Waar ga je heen in de kerstvakantie?", sentenceKun: "今日は仕事を休みます。", transKun: "Vandaag neem ik vrij van werk." },
+            { id: 95, kanji: "夕", onyomi: "セキ", kunyomi: "ゆう", meaning: "Avond", sentenceOn: "七夕のお祭りは楽しいです。", transOn: "Het Tanabata festival is leuk.", sentenceKun: "夕方の空が赤いです。", transKun: "De avondlucht is rood." },
+            { id: 96, kanji: "早", onyomi: "ソウ", kunyomi: "はや(い)", meaning: "Vroeg", sentenceOn: "早退してもいいですか。", transOn: "Mag ik eerder weg?", sentenceKun: "明日は早く起きます。", transKun: "Morgen sta ik vroeg op." },
+            { id: 97, kanji: "新", onyomi: "シン", kunyomi: "あたら(しい)", meaning: "Nieuw", sentenceOn: "新幹線はとても速いです。", transOn: "De kogeltrein is erg snel.", sentenceKun: "新しい靴を買いました。", transKun: "Ik heb nieuwe schoenen gekocht." },
+            { id: 98, kanji: "古", onyomi: "コ", kunyomi: "ふる(い)", meaning: "Oud", sentenceOn: "中古の車を探しています。", transOn: "Ik zoek een tweedehands auto.", sentenceKun: "古い時計を直しました。", transKun: "Ik heb een oude klok gerepareerd." },
+            { id: 99, kanji: "広", onyomi: "コウ", kunyomi: "ひろ(い)", meaning: "Breed/Groot", sentenceOn: "広告を見て知りました。", transOn: "Ik kwam erachter door de advertentie.", sentenceKun: "私の部屋はあまり広くないです。", transKun: "Mijn kamer is niet erg groot." },
+            { id: 100, kanji: "川", onyomi: "セン", kunyomi: "かわ", meaning: "Rivier", sentenceOn: "河川敷で走ります。", transOn: "Ik ren op de rivieroever.", sentenceKun: "川で泳がないでください。", transKun: "Zwem niet in de rivier." }
+        ];
+
+        // --- ICONS ---
+        const Icon = ({ path }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {path}
+            </svg>
+        );
+
+        const BookOpen = () => <Icon path={<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>} />;
+        const Layers = () => <Icon path={<><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>} />;
+        const ChevronRight = () => <Icon path={<polyline points="9 18 15 12 9 6"/>} />;
+        const Home = () => <Icon path={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>} />;
+        const Search = () => <Icon path={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} />;
+        const Archive = () => <Icon path={<><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></>} />;
+        const RotateCcw = () => <Icon path={<><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></>} />;
+
+        // --- COMPONENTS ---
+
+        const StartScreen = ({ onSelectMode, activeCount, totalCount }) => (
+            <div className="flex flex-col items-center justify-center min-h-[90vh] px-4 text-center">
+                <div className="bg-white p-10 rounded-[40px] shadow-2xl border-b-8 border-slate-200 max-w-lg w-full">
+                    <div className="text-7xl mb-6">🏯</div>
+                    <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tighter uppercase leading-tight">Kanji Master 100</h1>
+                    <p className="text-slate-500 mb-10 italic">A2 Niveau Voorbeeldzinnen</p>
+                    
+                    <div className="mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Actieve Kanji</div>
+                        <div className="text-3xl font-black text-venice-green">{activeCount} / {totalCount}</div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <button onClick={() => onSelectMode('learn')} className="w-full bg-venice-green hover:bg-[#044a3a] text-white font-bold py-5 rounded-2xl flex items-center justify-between px-8 transition-all hover:scale-[1.02] shadow-lg group">
+                            <div className="flex items-center gap-4 text-left">
+                                <BookOpen />
+                                <div>
+                                    <div className="text-lg">Bestuderen</div>
+                                    <div className="text-xs opacity-60 font-normal">Bekijk de A2 zinnen</div>
+                                </div>
+                            </div>
+                            <ChevronRight />
+                        </button>
+                        <button onClick={() => onSelectMode('match')} className="w-full bg-pinkish-cinnamon hover:bg-[#c07259] text-white font-bold py-5 rounded-2xl flex items-center justify-between px-8 transition-all hover:scale-[1.02] shadow-lg group">
+                            <div className="flex items-center gap-4 text-left">
+                                <Layers />
+                                <div>
+                                    <div className="text-lg">Triple Match</div>
+                                    <div className="text-xs opacity-60 font-normal">Test je kennis</div>
+                                </div>
+                            </div>
+                            <ChevronRight />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const MatchGame = ({ onBack, data }) => {
+            const [gameSize, setGameSize] = useState(4);
+            const [cards, setCards] = useState([]);
+            const [selected, setSelected] = useState([]);
+            const [matchedIds, setMatchedIds] = useState([]);
+            const [isPlaying, setIsPlaying] = useState(false);
+
+            const initGame = useCallback(() => {
+                const count = Math.min(gameSize, data.length);
+                const shuffled = [...data].sort(() => 0.5 - Math.random()).slice(0, count);
+                const gameCards = [];
+                shuffled.forEach(item => {
+                    gameCards.push({ id: `k-${item.id}`, kanjiId: item.id, type: 'kanji', content: item.kanji });
+                    gameCards.push({ id: `on-${item.id}`, kanjiId: item.id, type: 'onyomi', sentence: item.sentenceOn, trans: item.transOn });
+                    gameCards.push({ id: `kun-${item.id}`, kanjiId: item.id, type: 'kunyomi', sentence: item.sentenceKun, trans: item.transKun });
+                });
+                setCards(gameCards.sort(() => 0.5 - Math.random()));
+                setMatchedIds([]);
+                setSelected([]);
+                setIsPlaying(true);
+            }, [gameSize, data]);
+
+            useEffect(() => {
+                if (selected.length === 3) {
+                    const [c1, c2, c3] = selected;
+                    if (c1.kanjiId === c2.kanjiId && c2.kanjiId === c3.kanjiId && new Set([c1.type, c2.type, c3.type]).size === 3) {
+                        setTimeout(() => {
+                            setMatchedIds(prev => [...prev, c1.kanjiId]);
+                            setSelected([]);
+                        }, 500);
+                    } else {
+                        setTimeout(() => setSelected([]), 1000);
+                    }
+                }
+            }, [selected]);
+
+            if (!isPlaying) {
+                return (
+                    <div className="max-w-md mx-auto py-20 px-4 text-center">
+                        <button onClick={onBack} className="mb-8 text-slate-500 flex items-center gap-2 mx-auto font-bold uppercase text-xs tracking-widest"><Home /> Home</button>
+                        <div className="bg-white p-8 rounded-3xl shadow-xl border-b-4 border-slate-200">
+                            <h2 className="text-2xl font-black mb-6 uppercase tracking-tight">Triple Match</h2>
+                            <p className="text-sm text-slate-400 mb-8 px-4 leading-relaxed font-medium">Match de kanji met de Onyomi en Kunyomi zinnen.</p>
+                            <div className="flex items-center gap-4 mb-8 bg-slate-100 p-2 rounded-2xl">
+                                <span className="text-xs font-black pl-4 uppercase">Set grootte:</span>
+                                <input type="number" min="2" max="12" value={gameSize} onChange={(e) => setGameSize(parseInt(e.target.value))} className="bg-transparent w-full text-center text-2xl font-black outline-none" />
+                            </div>
+                            <button onClick={initGame} className="w-full bg-pinkish-cinnamon text-white font-black py-4 rounded-2xl shadow-lg hover:scale-[1.02] transition-transform">START SPEL</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                        <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400"><Home /></button>
+                        <h2 className="text-sm font-black uppercase tracking-widest text-slate-500">Voortgang ({matchedIds.length}/{cards.length / 3})</h2>
+                        <button onClick={() => setIsPlaying(false)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg"><RotateCcw /></button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
+                        {cards.map(card => {
+                            if (matchedIds.includes(card.kanjiId)) return <div key={card.id} className="h-44 opacity-0 pointer-events-none"></div>;
+                            const isSelected = selected.some(s => s.id === card.id);
+                            let styleClass = isSelected ? "ring-4 ring-slate-900 scale-95" : "hover:shadow-lg hover:translate-y-[-2px]";
+                            if (card.type === 'kanji') styleClass += " bg-light-caucus-blue border-blue-200 text-blue-900";
+                            else if (card.type === 'onyomi') styleClass += " bg-benzol-green border-[#00ba8b] text-white";
+                            else styleClass += " bg-yellow-orange border-[#e69b32] text-white";
+
+                            return (
+                                <div key={card.id} onClick={() => !isSelected && selected.length < 3 && setSelected([...selected, card])} className={`cursor-pointer transition-all h-44 rounded-2xl border-4 flex flex-col items-center justify-center p-4 text-center ${styleClass}`}>
+                                    {card.type === 'kanji' ? (
+                                        <div className="text-7xl font-black kanji-font">{card.content}</div>
+                                    ) : (
+                                        <div className="overflow-hidden">
+                                            <div className="text-[13px] leading-tight font-black kanji-font mb-2">{card.sentence}</div>
+                                            <div className="text-[11px] font-bold opacity-80 uppercase tracking-tighter">{card.trans}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        const LearnMode = ({ onBack, data, onArchive, archivedCount, onReset }) => {
+            const [search, setSearch] = useState("");
+            const filtered = data.filter(k => k.kanji.includes(search) || k.meaning.toLowerCase().includes(search.toLowerCase()));
+
+            return (
+                <div className="min-h-screen pb-20">
+                    <header className="bg-venice-green text-white py-12 px-6 shadow-2xl mb-12 rounded-b-[60px]">
+                        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div className="flex items-center gap-6">
+                                <button onClick={onBack} className="bg-white/10 hover:bg-white/20 p-3 rounded-2xl transition-all"><Home /></button>
+                                <div><h1 className="text-3xl font-black uppercase tracking-tighter">Bibliotheek</h1><p className="text-white/60 text-[10px] uppercase font-bold tracking-widest">{data.length} Kanji Actief (A2)</p></div>
+                            </div>
+                            <div className="flex items-center gap-4 w-full md:w-auto">
+                                <div className="relative w-full">
+                                    <input type="text" placeholder="Zoek op kanji of betekenis..." className="w-full bg-white/10 border-none rounded-2xl py-4 pl-12 pr-6 text-white placeholder-white/30 outline-none focus:ring-2 ring-white/20" value={search} onChange={(e) => setSearch(e.target.value)} />
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30"><Search /></div>
+                                </div>
+                                {archivedCount > 0 && <button onClick={onReset} className="bg-red-500/20 px-5 py-4 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-red-500/40 transition-colors"><RotateCcw /> RESET</button>}
+                            </div>
+                        </div>
+                    </header>
+                    <main className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {filtered.map(item => (
+                            <div key={item.id} className="group relative bg-white p-8 rounded-[40px] shadow-lg border-b-8 border-slate-200 hover:-translate-y-2 transition-all">
+                                <button onClick={() => onArchive(item.id)} className="absolute top-6 right-6 p-3 bg-slate-50 text-slate-300 hover:text-pinkish-cinnamon rounded-2xl opacity-0 group-hover:opacity-100 transition-all"><Archive /></button>
+                                <div className="text-8xl font-black kanji-font text-blue-900 bg-light-caucus-blue w-32 h-32 flex items-center justify-center rounded-[32px] mb-6 shadow-inner">{item.kanji}</div>
+                                <div className="text-2xl font-black text-venice-green mb-1">{item.meaning}</div>
+                                <div className="text-xs font-bold text-slate-400 mb-6 flex gap-4 uppercase">
+                                    <span>ON: {item.onyomi}</span>
+                                    <span>KUN: {item.kunyomi}</span>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="bg-benzol-green/10 border-l-4 border-benzol-green p-4 rounded-r-2xl">
+                                        <div className="text-[14px] font-black kanji-font text-slate-800 mb-1">{item.sentenceOn}</div>
+                                        <div className="text-[12px] font-medium text-slate-500">{item.transOn}</div>
+                                    </div>
+                                    <div className="bg-yellow-orange/10 border-l-4 border-yellow-orange p-4 rounded-r-2xl">
+                                        <div className="text-[14px] font-black kanji-font text-slate-800 mb-1">{item.sentenceKun}</div>
+                                        <div className="text-[12px] font-medium text-slate-500">{item.transKun}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </main>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+        function App() {
+            const [view, setView] = useState('home');
+            const [archivedIds, setArchivedIds] = useState([]);
+
+            useEffect(() => {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    try { setArchivedIds(JSON.parse(saved)); } catch(e) {}
+                }
+            }, []);
+
+            const toggleArchive = (id) => {
+                const newIds = archivedIds.includes(id) ? archivedIds.filter(i => i !== id) : [...archivedIds, id];
+                setArchivedIds(newIds);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(newIds));
+            };
+
+            const resetArchive = () => {
+                if (confirm("Weet je zeker dat je alle gearchiveerde kanji wilt herstellen?")) {
+                    setArchivedIds([]);
+                    localStorage.removeItem(STORAGE_KEY);
+                }
+            };
+
+            const activeData = KANJI_DATA.filter(k => !archivedIds.includes(k.id));
+
+            return (
+                <div className="antialiased text-slate-900">
+                    {view === 'learn' && <LearnMode onBack={() => setView('home')} data={activeData} onArchive={toggleArchive} archivedCount={archivedIds.length} onReset={resetArchive} />}
+                    {view === 'match' && <MatchGame onBack={() => setView('home')} data={activeData} />}
+                    {view === 'home' && <StartScreen onSelectMode={setView} activeCount={activeData.length} totalCount={KANJI_DATA.length} />}
+                </div>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
